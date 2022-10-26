@@ -2,7 +2,16 @@ from vkbottle import CtxStorage
 from vkbottle import BaseMiddleware
 from vkbottle.bot import Message
 from vkbottle import BaseStateGroup
+from pydantic import BaseModel
+from typing import Union
 
+class FeedbackForm(BaseModel):
+    user_id:str
+    username:str = ''
+    text:str
+    source: str
+    media: Union[list[str], None] = []
+    link:str
 
 class Store(CtxStorage):
     """ Хронилище данных пользователя."""
@@ -10,34 +19,54 @@ class Store(CtxStorage):
     def token(self, v1, v2):
         return hash(hash(v1) + hash(v2))
 
-    def get(self, name):
-        def _func(peer_id, data):
-            return self.get(self.token(peer_id, name), data)
+    def _get(self, name):
+        """ Получает данные из хранилищя с помощью ключа"""
+        def _func(peer_id):
+            return self.get(self.token(peer_id, name))
         return _func
 
-    def add(self, name):
+    def _add(self, name):
         def _func(peer_id, data):
             self.set(self.token(peer_id, name), data)
         return _func
 
     def __getattr__(self, item):
+        """ 
+        Реализация обертки вызовов для хранилищя с помощью
+        формирования уникального ключа на 
+        основе id и названия метода
+        - add 
+        - get
+        > ctx.add_data(id, 12)
+
+        > ctx.get_data(id)
+        12
+        """
+
         method, name = item.split("_")
-        return geattr(self, method, None)
+        method = '_' + method
+        return getattr(self, method, None)(name)
 
     def get_data(self, peer_id):
-        return  {
-            'text': self.get_text(peer_id),
-            'media': self.get_media(peer_id)
-                 }
+        data = {
+                'user_id': peer_id,
+                'username': self.get_username(peer_id),
+                'source': 'vk',
+                'text': self.get_text(peer_id),
+                'media': self.get_media(peer_id),
+                'link': self.get_link(peer_id),
+
+        }
+        return FeedbackForm(**data).json()
 
     async def send_data(self, message: Message):
         data = self.get_data(message.peer_id)
-        users_info = (await bot.api.users.get(message.from_id, fields = ['domain', ]))[0]
-        url = "https://vk.com/{}".format(users_info.domain) if users_info.domain else ""
+        print(data)
+
 
     def clear(self, peer_id):
-        self.set_text(peer_id, None)
-        self.set_media(peer_id, None)
+        self.add_text(peer_id, None)
+        self.add_media(peer_id, None)
 
 
 class NoBotMiddleware(BaseMiddleware[Message]):
@@ -64,3 +93,4 @@ class InfoMiddleware(BaseMiddleware[Message]):
 
 
 ctx = Store()
+

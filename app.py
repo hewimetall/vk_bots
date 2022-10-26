@@ -6,11 +6,10 @@ from vkbottle.bot import Bot, Message
 logging.getLogger("vkbottle").setLevel(logging.ERROR)
 from helpers import ctx, NoBotMiddleware, MenuState
 from settings import Setting
-token = ""
-
-bot = Bot(token)
-bot.labeler.message_view.register_middleware(NoBotMiddleware)
 settings = Setting()
+
+bot = Bot(settings.conf.defaults()['token'])
+bot.labeler.message_view.register_middleware(NoBotMiddleware)
 
 async def clear_session(peer_id):
     """ для очистки сессии """
@@ -22,6 +21,13 @@ async def clear_session(peer_id):
 
 
 async def start_handler(message: Message):
+    users_info = (await bot.api.users.get(message.from_id, fields = ['domain', ]))[0]
+    url = "https://vk.com/{}".format(users_info.domain) if users_info.domain else ""
+    ctx.add_link(message.peer_id, url)
+    ctx.add_username(message.peer_id,
+    '{} {}'.format(users_info.first_name, users_info.last_name)
+    )
+
     await message.answer(settings.commands.text['message'])
     if message.text.lower() == settings.commands.text['cmd_start']:
         await text_handler(message)
@@ -113,6 +119,7 @@ async def media_handler(message: Message):
 async def finish_handler(message: Message):
     payload: dict = message.get_payload_json()  # type: ignore
     cmd = payload['item']
+
     if cmd == 'upload':
         await bot.state_dispenser.set(message.peer_id, MenuState.MEDIA)
         return settings.commands.finish['message_1']

@@ -28,7 +28,7 @@ class Setting(object):
 
     @property
     def keyboard(self) -> ConfigParser:
-        return self.config['keyboard']
+        return self.config['keyboards']
 
     @property
     def commands(self) -> ConfigParser:
