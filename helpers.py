@@ -1,9 +1,13 @@
+import os
+
 from vkbottle import CtxStorage
 from vkbottle import BaseMiddleware
 from vkbottle.bot import Message
 from vkbottle import BaseStateGroup
 from pydantic import BaseModel
 from typing import Union
+import pika
+
 
 class FeedbackForm(BaseModel):
     user_id:str
@@ -60,7 +64,7 @@ class Store(CtxStorage):
         return FeedbackForm(**data).json()
 
     async def send_data(self, message: Message):
-        with pika.BlockingConnection(pika.URLParameters(self.rabbitmq)) as connection:
+        with pika.BlockingConnection(pika.URLParameters(os.getenv('rabbitmq', ""))) as connection:
             with connection.channel() as channel:
                     # отправка данных в очередь
                     queue = os.getenv('QNAME', "form_push")
