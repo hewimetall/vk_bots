@@ -23,8 +23,8 @@ class Setting(object):
             self.config[name] = parser_ini(path)
 
     @property
-    def state(self) -> ConfigParser:
-        return self.config['state']
+    def keyboard(self) -> ConfigParser:
+        return self.config['keyboard']
 
     @property
     def commands(self) -> ConfigParser:

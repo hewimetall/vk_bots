@@ -28,6 +28,8 @@ class Store(CtxStorage):
 
     async def send_data(self, message: Message):
         data = self.get_data(message.peer_id)
+        users_info = (await bot.api.users.get(message.from_id, fields = ['domain', ]))[0]
+        url = "https://vk.com/{}".format(users_info.domain) if users_info.domain else ""
 
     def clear(self, peer_id):
         self.set(self.token(peer_id, 'text'), None)
@@ -48,6 +50,14 @@ class MenuState(BaseStateGroup):
     MEDIA = 4
     FINISH = 5
 
+class InfoMiddleware(BaseMiddleware[Message]):
+    async def post(self):
+        if not self.handlers:
+            self.stop("Сообщение не было обработано")
+
+        await self.event.answer(
+            "Сообщение было обработано:\n\n"
+        )
 
 
 

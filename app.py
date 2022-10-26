@@ -5,12 +5,12 @@ from vkbottle.bot import Bot, Message
 
 logging.getLogger("vkbottle").setLevel(logging.ERROR)
 from helpers import ctx, NoBotMiddleware, MenuState
-
+from settings import Setting
 token = ""
 
 bot = Bot(token)
 bot.labeler.message_view.register_middleware(NoBotMiddleware)
-
+settings = Setting()
 
 async def clear_session(peer_id):
     """ для очистки сессии """
@@ -21,26 +21,29 @@ async def clear_session(peer_id):
     await bot.state_dispenser.set(peer_id, MenuState.START)
 
 
-async def log_handler(message: Message):
-    data = await bot.state_dispenser.get(message.peer_id)
-    await message.answer(f'state :{data}')
-
-
 async def start_handler(message: Message):
     await message.answer(
-        "Привет это стартовое меню.",
-        keyboard=(
-            Keyboard(inline=True)
-            .add(Text("Создать заявку?", {"cmd": "start"}))
-            .get_json()
-        ),
-    )
-    await bot.state_dispenser.set(message.peer_id, MenuState.START)
-
+        "Здравствуйте! Сюда можно прислать эксклюзивные новости, фото и прочие инсайды.")
+    if message.text.lower == 'начать':
+        await text_handler(message)
+    else:
+        await bot.state_dispenser.set(message.peer_id, MenuState.START)
+        await info_handler(message)
 
 async def info_handler(message: Message):
     await message.answer(
-        "Ведите текст",
+        "Что интересного произошло? Чем хотите поделиться?. Для создания новости нажмите 'Начать'\n",
+        keyboard=(
+            Keyboard(inline=True)
+            .add(Text("Начать", {"cmd": "start"}))
+            .get_json()
+        ),
+    )
+
+
+async def text_handler(message: Message):
+    await message.answer(
+        "Напишите буквами как можно подробнее (например, указать дату, время, место, контакт для оперативной связи с вами).",
     )
     await bot.state_dispenser.set(message.peer_id, MenuState.TEXT)
 
@@ -51,13 +54,13 @@ async def add_text_handler(message: Message):
         "Выберите из списка",
         keyboard=(
             Keyboard(inline=True)
-            .add(Text("Отправит", {"item": "send"}))
+            .add(Text("отправить новость редакции", {"item": "send"})).row()
             .add(Text("Загрузить фото", {"item": "add_photo"}))
-            .add(Text("Отменить", {"item": "undo"}))
+            .add(Text("Изменить текст", {"item": "text_change"}))
+            .add(Text("Отменить новость", {"item": "undo"}))
             .get_json()
         ),
     )
-    await bot.state_dispenser.set(message.peer_id, MenuState.WAIT)
 
 
 async def swith_handler(message: Message):
@@ -71,16 +74,13 @@ async def swith_handler(message: Message):
             "Загрузите изображения",
         )
         await bot.state_dispenser.set(message.peer_id, MenuState.MEDIA)
+    elif cmd == 'text_change':
+        return await text_handler(message)
     elif cmd == 'undo':
         await clear_session(message.peer_id)
-        await message.answer(
-            "Успешно отменина",
-            keyboard=(
-                Keyboard(inline=False)
-                .add(Text("Создать заявку?", {"cmd": "start"}))
-                .get_json()
-            ),
-        )
+        await bot.state_dispenser.set(message.peer_id, MenuState.START)
+        await message.answer("Успешно отменена")
+        return await info_handler(message)
 
 
 async def media_handler(message: Message):
@@ -100,7 +100,7 @@ async def media_handler(message: Message):
         await message.answer('Успешно загруженно')
         await message.answer('Можете загрузить ещё или',
                              keyboard=Keyboard(inline=True)
-                             .add(Text("Отправит", {"item": "send"}))
+                             .add(Text("Отправит", {"item": "send"})).row()
                              .add(Text("Загрузить ещё", {"item": "upload"}))
                              .add(Text("Отменить", {"item": "undo"}))
                              )
@@ -115,22 +115,28 @@ async def finish_handler(message: Message):
     if cmd == 'upload':
         await bot.state_dispenser.set(message.peer_id, MenuState.MEDIA)
         return "Загрузите изображения"
-    ctx.send_data(message)
+    await ctx.send_data(message)
     await clear_session(message.peer_id)
-    await message.answer("Успешно исполнено",
-                         keyboard=(
-                             Keyboard(inline=True)
-                             .add(Text("Создать заявку", {"cmd": "start"}))
-                             .get_json()
-                         ),
-                         )
+    if cmd == 'send':
+        text = "Новость успешно отправлена редакции IRK.ru. Вы хотите еще что-то добавить? Нажмите 'Начать'"
+    else:
+        text = "Успешно исполнено"
+    await message.answer(text)
+    await bot.state_dispenser.set(message.peer_id, MenuState.START)
+    await info_handler(message)
 
-
-bot.on.private_message(blocking=False)(log_handler)
+# Init message
 bot.on.private_message(state=None)(start_handler)
+# For start create news
+bot.on.private_message(state=MenuState.START, payload={"cmd": "start"})(text_handler)
+# For wait start create news
+bot.on.private_message(state=MenuState.START)(info_handler)
+# Add media
 bot.on.private_message(state=MenuState.MEDIA, )(media_handler)
+# Route wait message send | add media | undo
+bot.on.private_message(state=MenuState.TEXT, payload_map=[("item", str)])(swith_handler)
+# Add text
 bot.on.private_message(state=MenuState.TEXT)(add_text_handler)
-bot.on.private_message(state=MenuState.START, payload={"cmd": "start"})(info_handler)
-bot.on.private_message(state=MenuState.WAIT, payload_map=[("item", str)])(swith_handler)
+# Route wait message send and reload
 bot.on.private_message(state=MenuState.FINISH)(finish_handler)
 bot.run_forever()
