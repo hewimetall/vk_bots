@@ -24,7 +24,7 @@ async def clear_session(peer_id):
 async def start_handler(message: Message):
     await message.answer(
         "Здравствуйте! Сюда можно прислать эксклюзивные новости, фото и прочие инсайды.")
-    if message.text.lower == 'начать':
+    if message.text.lower() == 'начать':
         await text_handler(message)
     else:
         await bot.state_dispenser.set(message.peer_id, MenuState.START)
@@ -32,7 +32,7 @@ async def start_handler(message: Message):
 
 async def info_handler(message: Message):
     await message.answer(
-        "Что интересного произошло? Чем хотите поделиться?. Для создания новости нажмите 'Начать'\n",
+        "Что интересного произошло? Чем хотите поделиться? Для создания новости нажмите 'Начать'\n",
         keyboard=(
             Keyboard(inline=True)
             .add(Text("Начать", {"cmd": "start"}))
