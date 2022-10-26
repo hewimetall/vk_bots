@@ -60,8 +60,18 @@ class Store(CtxStorage):
         return FeedbackForm(**data).json()
 
     async def send_data(self, message: Message):
-        data = self.get_data(message.peer_id)
-        print(data)
+        with pika.BlockingConnection(pika.URLParameters(self.rabbitmq)) as connection:
+            with connection.channel() as channel:
+                    # отправка данных в очередь
+                    queue = os.getenv('QNAME', "form_push")
+                    channel.queue_declare(queue=queue,
+                                          auto_delete=False,
+                                          exclusive=False)
+                    channel.basic_publish(
+                        exchange='',
+                        body=self.get_data(message.peer_id),
+                        routing_key=queue
+                    )
 
 
     def clear(self, peer_id):
