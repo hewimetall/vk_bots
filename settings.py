@@ -1,8 +1,12 @@
 from configparser import ConfigParser
 from pathlib import PurePath
 
+class IniConfigParser(ConfigParser):
+    def __getattr__(self, item):
+        return self[item]
+
 def parser_ini(filename)->ConfigParser:
-    cp = ConfigParser()
+    cp = IniConfigParser()
     cp.read(filename)
     return cp
 

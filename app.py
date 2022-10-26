@@ -22,9 +22,8 @@ async def clear_session(peer_id):
 
 
 async def start_handler(message: Message):
-    await message.answer(
-        "Здравствуйте! Сюда можно прислать эксклюзивные новости, фото и прочие инсайды.")
-    if message.text.lower() == 'начать':
+    await message.answer(settings.commands.text['message'])
+    if message.text.lower() == settings.commands.text['cmd_start']:
         await text_handler(message)
     else:
         await bot.state_dispenser.set(message.peer_id, MenuState.START)
@@ -32,10 +31,11 @@ async def start_handler(message: Message):
 
 async def info_handler(message: Message):
     await message.answer(
-        "Что интересного произошло? Чем хотите поделиться? Для создания новости нажмите 'Начать'\n",
+        settings.commands.info['message'],
         keyboard=(
             Keyboard(inline=True)
-            .add(Text("Начать", {"cmd": "start"}))
+            .add(Text(settings.commands.info['cmd_start'],
+            {"cmd": "start"}))
             .get_json()
         ),
     )
@@ -43,7 +43,7 @@ async def info_handler(message: Message):
 
 async def text_handler(message: Message):
     await message.answer(
-        "Напишите буквами как можно подробнее (например, указать дату, время, место, контакт для оперативной связи с вами).",
+        settings.commands.text['message_1'],
     )
     await bot.state_dispenser.set(message.peer_id, MenuState.TEXT)
 
@@ -51,7 +51,7 @@ async def text_handler(message: Message):
 async def add_text_handler(message: Message):
     ctx.add_text(message.peer_id, message.text)
     await message.answer(
-        "Выберите из списка",
+        settings.commands.text['message_2'],
         keyboard=(
             Keyboard(inline=True)
             .add(Text("отправить новость редакции", {"item": "send"})).row()
@@ -71,7 +71,7 @@ async def swith_handler(message: Message):
         return await finish_handler(message)
     if cmd == 'add_photo':
         await message.answer(
-            "Загрузите изображения",
+           settings.commands.swith['add_photo'],
         )
         await bot.state_dispenser.set(message.peer_id, MenuState.MEDIA)
     elif cmd == 'text_change':
@@ -79,7 +79,7 @@ async def swith_handler(message: Message):
     elif cmd == 'undo':
         await clear_session(message.peer_id)
         await bot.state_dispenser.set(message.peer_id, MenuState.START)
-        await message.answer("Успешно отменена")
+        await message.answer(settings.commands.swith['undo'])
         return await info_handler(message)
 
 
@@ -97,8 +97,8 @@ async def media_handler(message: Message):
             photo_list += media
         ctx.add_media(message.peer_id, photo_list)
 
-        await message.answer('Успешно загруженно')
-        await message.answer('Можете загрузить ещё или',
+        await message.answer(settings.commands.media['message_1'])
+        await message.answer(settings.commands.media['message_2'],
                              keyboard=Keyboard(inline=True)
                              .add(Text("Отправит", {"item": "send"})).row()
                              .add(Text("Загрузить ещё", {"item": "upload"}))
@@ -106,7 +106,7 @@ async def media_handler(message: Message):
                              )
         await bot.state_dispenser.set(message.peer_id, MenuState.FINISH)
     except:
-        return "Загружать нужно фото"
+        return settings.commands.media['message_3']
 
 
 async def finish_handler(message: Message):
@@ -114,13 +114,13 @@ async def finish_handler(message: Message):
     cmd = payload['item']
     if cmd == 'upload':
         await bot.state_dispenser.set(message.peer_id, MenuState.MEDIA)
-        return "Загрузите изображения"
+        return settings.commands.finish['message_1']
     await ctx.send_data(message)
     await clear_session(message.peer_id)
     if cmd == 'send':
-        text = "Новость успешно отправлена редакции IRK.ru. Вы хотите еще что-то добавить? Нажмите 'Начать'"
+        text = settings.commands.finish['message_2']
     else:
-        text = "Успешно исполнено"
+        text = settings.commands.finish['message_3']
     await message.answer(text)
     await bot.state_dispenser.set(message.peer_id, MenuState.START)
     await info_handler(message)
