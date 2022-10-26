@@ -5,25 +5,29 @@ from vkbottle import BaseStateGroup
 
 
 class Store(CtxStorage):
+    """ Хронилище данных пользователя."""
+    
     def token(self, v1, v2):
         return hash(hash(v1) + hash(v2))
 
-    def get_text(self, peer_id):
-        return self.get(self.token(peer_id,'text'))
+    def get(self, name):
+        def _func(peer_id, data):
+            return self.get(self.token(peer_id, name), data)
+        return _func
 
-    def get_media(self, peer_id):
-        return self.get(self.token(peer_id,'media'))
+    def add(self, name):
+        def _func(peer_id, data):
+            self.set(self.token(peer_id, name), data)
+        return _func
 
-    def add_text(self, peer_id, data):
-        self.set(self.token(peer_id, 'text'), data)
-
-    def add_media(self, peer_id, data):
-        self.set(self.token(peer_id, 'media'), data)
+    def __getattr__(self, item):
+        method, name = item.split("_")
+        return geattr(self, method, None)
 
     def get_data(self, peer_id):
         return  {
-            'text': self.get(self.token(peer_id, 'text')),
-            'media': self.get(self.token(peer_id, 'media'))
+            'text': self.get_text(peer_id),
+            'media': self.get_media(peer_id)
                  }
 
     async def send_data(self, message: Message):
@@ -32,9 +36,8 @@ class Store(CtxStorage):
         url = "https://vk.com/{}".format(users_info.domain) if users_info.domain else ""
 
     def clear(self, peer_id):
-        self.set(self.token(peer_id, 'text'), None)
-        self.set(self.token(peer_id, 'media'), None)
-
+        self.set_text(peer_id, None)
+        self.set_media(peer_id, None)
 
 
 class NoBotMiddleware(BaseMiddleware[Message]):
@@ -58,7 +61,6 @@ class InfoMiddleware(BaseMiddleware[Message]):
         await self.event.answer(
             "Сообщение было обработано:\n\n"
         )
-
 
 
 ctx = Store()

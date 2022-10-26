@@ -50,14 +50,15 @@ async def text_handler(message: Message):
 
 async def add_text_handler(message: Message):
     ctx.add_text(message.peer_id, message.text)
+    settings.keyboard.media
     await message.answer(
         settings.commands.text['message_2'],
         keyboard=(
             Keyboard(inline=True)
-            .add(Text("отправить новость редакции", {"item": "send"})).row()
-            .add(Text("Загрузить фото", {"item": "add_photo"}))
-            .add(Text("Изменить текст", {"item": "text_change"}))
-            .add(Text("Отменить новость", {"item": "undo"}))
+            .add(Text(settings.keyboard.text_swith['send'], {"item": "send"})).row()
+            .add(Text(settings.keyboard.text_swith['add_photo'], {"item": "add_photo"}))
+            .add(Text(settings.keyboard.text_swith['text_change'], {"item": "text_change"}))
+            .add(Text(settings.keyboard.text_swith['undo'], {"item": "undo"}))
             .get_json()
         ),
     )
@@ -100,9 +101,9 @@ async def media_handler(message: Message):
         await message.answer(settings.commands.media['message_1'])
         await message.answer(settings.commands.media['message_2'],
                              keyboard=Keyboard(inline=True)
-                             .add(Text("Отправит", {"item": "send"})).row()
-                             .add(Text("Загрузить ещё", {"item": "upload"}))
-                             .add(Text("Отменить", {"item": "undo"}))
+                             .add(Text(settings.keyboard.media['send'], {"item": "send"})).row()
+                             .add(Text(settings.keyboard.media['upload'], {"item": "upload"}))
+                             .add(Text(settings.keyboard.media['undo'], {"item": "undo"}))
                              )
         await bot.state_dispenser.set(message.peer_id, MenuState.FINISH)
     except:
