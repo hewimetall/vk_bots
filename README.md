@@ -52,7 +52,7 @@ poetry run pytest
 Run coverage with the repository threshold:
 
 ```bash
-poetry run pytest --cov=. --cov-report=term-missing --cov-fail-under=93
+poetry run pytest --cov --cov-report=term-missing --cov-fail-under=93
 ```
 
 ## Dependency audit

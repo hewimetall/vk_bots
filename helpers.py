@@ -5,7 +5,6 @@ from vkbottle import BaseMiddleware
 from vkbottle.bot import Message
 from vkbottle import BaseStateGroup
 from pydantic import BaseModel
-from typing import Union
 import pika
 
 
@@ -14,7 +13,7 @@ class FeedbackForm(BaseModel):
     username:str = ''
     text:str
     source: str
-    media: Union[list[str], None] = []
+    media: list[str] | None = None
     link:str
 
 class Store(CtxStorage):
@@ -47,13 +46,20 @@ class Store(CtxStorage):
         12
         """
 
-        method, name = item.split("_")
+        try:
+            method, name = item.split("_", 1)
+        except ValueError as exc:
+            raise AttributeError(item) from exc
         method = '_' + method
-        return getattr(self, method, None)(name)
+        try:
+            factory = object.__getattribute__(self, method)
+        except AttributeError as exc:
+            raise AttributeError(item) from exc
+        return factory(name)
 
     def get_data(self, peer_id):
         data = {
-                'user_id': peer_id,
+                'user_id': str(peer_id),
                 'username': self.get_username(peer_id),
                 'source': 'vk',
                 'text': self.get_text(peer_id),
@@ -61,7 +67,7 @@ class Store(CtxStorage):
                 'link': self.get_link(peer_id),
 
         }
-        return FeedbackForm(**data).json()
+        return FeedbackForm(**data).model_dump_json()
 
     async def send_data(self, message: Message):
         with pika.BlockingConnection(pika.URLParameters(os.getenv('rabbitmq', ""))) as connection:

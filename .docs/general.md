@@ -33,7 +33,7 @@
 
 ```bash
 poetry run pytest
-poetry run pytest --cov=. --cov-report=term-missing --cov-fail-under=93
+poetry run pytest --cov --cov-report=term-missing --cov-fail-under=93
 poetry export -f requirements.txt --without-hashes -o /tmp/vk_bots_requirements.txt
 poetry run pip-audit -r /tmp/vk_bots_requirements.txt
 ```
