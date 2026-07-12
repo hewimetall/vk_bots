@@ -147,4 +147,5 @@ bot.on.private_message(state=MenuState.TEXT, payload_map=[("item", str)])(swith_
 bot.on.private_message(state=MenuState.TEXT)(add_text_handler)
 # Route wait message send and reload
 bot.on.private_message(state=MenuState.FINISH)(finish_handler)
-bot.run_forever()
+if __name__ == "__main__":
+    bot.run_forever()
